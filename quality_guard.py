@@ -1,4 +1,4 @@
-"""Heuristic quality guard for inputs far outside the normal component profile."""
+"""Shape-based input validation for the two supported component categories."""
 
 import cv2
 import numpy as np
@@ -12,48 +12,75 @@ def decode_rgb(image_bytes):
     return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
 
 
-def estimate_foreground_mask(image_bytes, size):
-    """Estimate the component area from its difference to the image border."""
+def _largest_component(binary):
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(binary.astype(np.uint8), connectivity=8)
+    if count < 2:
+        return np.zeros(binary.shape, dtype=bool)
+    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    return labels == largest
+
+
+def estimate_foreground_mask(image_bytes, size, category):
+    """Segment the dominant component using the acquisition style of MVTec AD."""
     image = cv2.resize(decode_rgb(image_bytes), (size, size), interpolation=cv2.INTER_AREA)
-    lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB).astype(np.float32)
-    border_width = max(2, size // 32)
-    border = np.concatenate((
-        lab[:border_width].reshape(-1, 3),
-        lab[-border_width:].reshape(-1, 3),
-        lab[:, :border_width].reshape(-1, 3),
-        lab[:, -border_width:].reshape(-1, 3),
-    ))
-    background = np.median(border, axis=0)
-    distance = np.linalg.norm(lab - background, axis=2)
-    scaled = cv2.normalize(distance, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    _, binary = cv2.threshold(scaled, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    kernel_size = max(3, (size // 64) | 1)
-    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    threshold_mode = cv2.THRESH_BINARY_INV if category == "screw" else cv2.THRESH_BINARY
+    _, binary = cv2.threshold(gray, 0, 255, threshold_mode + cv2.THRESH_OTSU)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
     binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
-    if count < 2:
-        return np.ones((size, size), dtype=bool)
-    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    foreground = labels == largest
-    if foreground.mean() < 0.005:
-        return np.ones((size, size), dtype=bool)
-    return foreground
+    return _largest_component(binary)
 
 
-def evaluate_category_guard(image_bytes, anomaly_map, pixel_threshold, image_score, image_threshold, area_threshold=0.90, enabled=True):
-    """Flag inputs whose detected anomaly covers almost the whole component."""
-    foreground = estimate_foreground_mask(image_bytes, anomaly_map.shape[0])
-    anomaly_mask = anomaly_map > pixel_threshold
-    foreground_pixels = int(foreground.sum())
-    anomaly_pixels = int(np.logical_and(anomaly_mask, foreground).sum())
-    anomaly_ratio = anomaly_pixels / foreground_pixels if foreground_pixels else 0.0
-    requires_verification = bool(enabled and image_score > image_threshold and anomaly_ratio >= area_threshold)
+def measure_object_shape(mask):
+    """Return scale-independent measurements from a binary component mask."""
+    height, width = mask.shape
+    points = np.column_stack(np.nonzero(mask))[:, ::-1].astype(np.float32)
+    if len(points) < 5:
+        return {"area_ratio": 0.0, "major_axis_ratio": 0.0, "minor_axis_ratio": 0.0, "elongation": 0.0, "border_touch_ratio": 1.0}
+    (_, _), (box_width, box_height), _ = cv2.minAreaRect(points)
+    major = max(box_width, box_height)
+    minor = max(min(box_width, box_height), 1e-6)
+    border_pixels = int(mask[0].sum() + mask[-1].sum() + mask[:, 0].sum() + mask[:, -1].sum())
     return {
-        "foreground_mask": foreground,
-        "anomaly_mask": anomaly_mask,
-        "object_coverage": float(foreground.mean()),
-        "anomaly_object_ratio": float(anomaly_ratio),
-        "verification_threshold": float(area_threshold),
-        "requires_verification": requires_verification,
+        "area_ratio": float(mask.mean()),
+        "major_axis_ratio": float(major / max(height, width)),
+        "minor_axis_ratio": float(minor / max(height, width)),
+        "elongation": float(major / minor),
+        "border_touch_ratio": float(border_pixels / max(int(mask.sum()), 1)),
+    }
+
+
+def evaluate_input_shape_guard(image_bytes, category, guard_config, size=256):
+    """Check whether the segmented object resembles the selected category's framing."""
+    mask = estimate_foreground_mask(image_bytes, size, category)
+    measurements = measure_object_shape(mask)
+    category_limits = guard_config.get("categories", {}).get(category, {})
+    reasons = []
+    labels = {
+        "area_ratio": "luas objek",
+        "major_axis_ratio": "panjang objek",
+        "minor_axis_ratio": "lebar objek",
+        "elongation": "rasio bentuk objek",
+    }
+    for feature, label in labels.items():
+        limits = category_limits.get(feature)
+        if limits and not (float(limits[0]) <= measurements[feature] <= float(limits[1])):
+            reasons.append(f"{label} di luar rentang {category}")
+    maximum_border_touch = float(category_limits.get("maximum_border_touch_ratio", 0.02))
+    if measurements["border_touch_ratio"] > maximum_border_touch:
+        reasons.append("objek menyentuh tepi gambar secara tidak wajar")
+    if not mask.any():
+        reasons.append("objek utama tidak berhasil ditemukan")
+    enabled = bool(guard_config.get("enabled", True))
+    return {
+        "foreground_mask": mask,
+        "object_area_ratio": measurements["area_ratio"],
+        "object_major_axis_ratio": measurements["major_axis_ratio"],
+        "object_minor_axis_ratio": measurements["minor_axis_ratio"],
+        "object_elongation": measurements["elongation"],
+        "object_border_touch_ratio": measurements["border_touch_ratio"],
+        "shape_guard_reasons": reasons,
+        "requires_verification": bool(enabled and reasons),
     }

@@ -44,8 +44,8 @@ if uploaded is not None and "comparison_results" in st.session_state:
     image_bytes = uploaded.getvalue()
     fingerprint, saved_category, results = st.session_state["comparison_results"]
     if (fingerprint, saved_category) == (hashlib.sha256(image_bytes).hexdigest(), category) and results:
-        rows = [{"Model": name, "Status tampilan": result["display_verdict"], "Keputusan model": result["verdict"], "Skor gambar": result["image_score"], "Batas keputusan": result["image_threshold"], "Area anomali objek": result["anomaly_object_ratio"], "Waktu proses (ms)": result["seconds"] * 1000} for name, result in results.items()]
-        st.dataframe(pd.DataFrame(rows).set_index("Model").style.format({"Skor gambar": "{:.5f}", "Batas keputusan": "{:.5f}", "Area anomali objek": "{:.1%}", "Waktu proses (ms)": "{:.0f}"}), width="stretch")
+        rows = [{"Model": name, "Status tampilan": result["display_verdict"], "Keputusan model": result["verdict"], "Skor gambar": result["image_score"], "Batas keputusan": result["image_threshold"], "Luas objek": result["object_area_ratio"], "Panjang relatif": result["object_major_axis_ratio"], "Waktu proses (ms)": result["seconds"] * 1000} for name, result in results.items()]
+        st.dataframe(pd.DataFrame(rows).set_index("Model").style.format({"Skor gambar": "{:.5f}", "Batas keputusan": "{:.5f}", "Luas objek": "{:.1%}", "Panjang relatif": "{:.1%}", "Waktu proses (ms)": "{:.0f}"}), width="stretch")
         for name in MODEL_NAMES:
             if name in results:
                 with st.expander(f"{name} · {results[name]['display_verdict']}", expanded=name == "EfficientAD"):

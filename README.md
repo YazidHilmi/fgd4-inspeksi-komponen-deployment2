@@ -13,7 +13,13 @@ streamlit run app.py
 
 Setiap kategori dan kandidat mempunyai batas gambar serta piksel sendiri. `deployment_config.json` memakai nilai dari `ringkasan_threshold.csv` di folder ini. Model tidak dilatih ulang saat aplikasi dijalankan.
 
-Pagar verifikasi kategori pada aplikasi menghitung persentase mask anomali di dalam mask objek hasil segmentasi latar sederhana. Jika skor gambar melewati batas keputusan dan sedikitnya 90% area objek ditandai anomali, aplikasi menahan komponen untuk verifikasi kategori atau kualitas foto. Aturan ini adalah heuristik deployment dan bukan model klasifikasi kategori.
+Pagar validasi input menyegmentasi objek sebelum inferensi ditampilkan. Untuk `screw`, objek dicari sebagai komponen gelap pada latar terang; untuk `metal_nut`, objek dicari sebagai komponen terang pada latar gelap. Luas, panjang, lebar, dan rasio bentuknya dibandingkan dengan rentang minimum–maksimum seluruh data `train/good`, lalu diberi toleransi agar cacat yang mengubah siluet tetap diteruskan ke model. Input yang jauh di luar rentang ditolak agar gambar asing atau framing yang tidak sesuai tidak dipaksa menjadi NORMAL/CACAT. Aturan ini adalah heuristik deployment dan bukan model klasifikasi kategori.
+
+Rentang pada `deployment_config.json` dapat dihitung ulang dari salinan MVTec AD dengan:
+
+```bash
+python calibrate_shape_guard.py --data-root /path/ke/mvtec_anomaly_detection
+```
 
 ## Artefak dan kode model
 

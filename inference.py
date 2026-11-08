@@ -15,7 +15,7 @@ from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import functional as TF
 
-from quality_guard import decode_rgb, evaluate_category_guard
+from quality_guard import decode_rgb, evaluate_input_shape_guard
 
 
 ROOT = Path(__file__).resolve().parent
@@ -156,9 +156,12 @@ def inspect(image_bytes, category, name):
     config = load_config()
     if category not in config["categories"] or name not in MODEL_NAMES:
         raise ValueError("Kategori atau model tidak dikenal.")
-    score, anomaly_map, elapsed = predict_efficientad(image_bytes, category) if name == "EfficientAD" else predict_dino(image_bytes, category, name)
     limits = config["categories"][category]["models"][name]["threshold"]
-    guard_config = config.get("category_guard", {})
-    guard = evaluate_category_guard(image_bytes, anomaly_map, limits["pixel"], score, limits["image"], area_threshold=float(guard_config.get("anomaly_area_threshold", 0.90)), enabled=bool(guard_config.get("enabled", True)))
+    guard_started = time.perf_counter()
+    guard = evaluate_input_shape_guard(image_bytes, category, config.get("input_shape_guard", {}), size=config["map_size"])
+    if guard["requires_verification"]:
+        return {"category": category, "model": name, "verdict": "TIDAK DIPROSES", "display_verdict": "INPUT DITOLAK", "image_score": None, "image_threshold": limits["image"], "pixel_threshold": limits["pixel"], "anomaly_map": None, "anomaly_mask": None, "seconds": time.perf_counter() - guard_started, **guard}
+    score, anomaly_map, elapsed = predict_efficientad(image_bytes, category) if name == "EfficientAD" else predict_dino(image_bytes, category, name)
+    anomaly_mask = anomaly_map > limits["pixel"]
     verdict = "CACAT" if score > limits["image"] else "NORMAL"
-    return {"category": category, "model": name, "verdict": verdict, "display_verdict": "VERIFIKASI" if guard["requires_verification"] else verdict, "image_score": score, "image_threshold": limits["image"], "pixel_threshold": limits["pixel"], "anomaly_map": anomaly_map, "seconds": elapsed, **guard}
+    return {"category": category, "model": name, "verdict": verdict, "display_verdict": "INPUT DITOLAK" if guard["requires_verification"] else verdict, "image_score": score, "image_threshold": limits["image"], "pixel_threshold": limits["pixel"], "anomaly_map": anomaly_map, "anomaly_mask": anomaly_mask, "seconds": elapsed, **guard}

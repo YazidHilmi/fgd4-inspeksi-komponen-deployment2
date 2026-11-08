@@ -6,10 +6,6 @@
   "dino_repo_commit": "b9d1c2648e3a5247437d4d953d907a8f3d994457",
   "dino_preprocess": "masking_only",
   "efficientad_max_epochs": 60,
-  "category_guard": {
-    "enabled": true,
-    "anomaly_area_threshold": 0.9
-  },
   "categories": {
     "screw": {
       "efficientad_checkpoint": "screw/efficientad/efficientad_final_60epoch.ckpt",
@@ -564,5 +560,51 @@
       }
     }
   },
-  "backbone_weights": "dinov2_vits14_state_dict.pt"
+  "backbone_weights": "dinov2_vits14_state_dict.pt",
+  "input_shape_guard": {
+    "enabled": true,
+    "method": "min_max_train_normal_with_defect_tolerant_margin",
+    "categories": {
+      "screw": {
+        "area_ratio": [
+          0.093674,
+          0.207138
+        ],
+        "major_axis_ratio": [
+          0.825562,
+          1.035376
+        ],
+        "minor_axis_ratio": [
+          0.254326,
+          0.313885
+        ],
+        "elongation": [
+          2.66749,
+          3.817441
+        ],
+        "maximum_border_touch_ratio": 0.02,
+        "calibration_images": 320
+      },
+      "metal_nut": {
+        "area_ratio": [
+          0.111414,
+          0.62197
+        ],
+        "major_axis_ratio": [
+          0.782023,
+          0.95
+        ],
+        "minor_axis_ratio": [
+          0.775132,
+          0.854326
+        ],
+        "elongation": [
+          0.85,
+          1.164399
+        ],
+        "maximum_border_touch_ratio": 0.02,
+        "calibration_images": 220
+      }
+    }
+  }
 }

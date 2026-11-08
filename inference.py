@@ -6,7 +6,6 @@ import sys
 import time
 from pathlib import Path
 
-import cv2
 import faiss
 import numpy as np
 import streamlit as st
@@ -15,6 +14,8 @@ import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import functional as TF
+
+from quality_guard import decode_rgb, evaluate_category_guard
 
 
 ROOT = Path(__file__).resolve().parent
@@ -107,11 +108,7 @@ def _synchronize():
 
 
 def _decode_rgb(image_bytes):
-    array = np.frombuffer(image_bytes, dtype=np.uint8)
-    bgr = cv2.imdecode(array, cv2.IMREAD_COLOR)
-    if bgr is None:
-        raise ValueError("Gambar tidak dapat dibaca. Gunakan PNG atau JPG yang valid.")
-    return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    return decode_rgb(image_bytes)
 
 
 def predict_dino(image_bytes, category, name):
@@ -161,4 +158,7 @@ def inspect(image_bytes, category, name):
         raise ValueError("Kategori atau model tidak dikenal.")
     score, anomaly_map, elapsed = predict_efficientad(image_bytes, category) if name == "EfficientAD" else predict_dino(image_bytes, category, name)
     limits = config["categories"][category]["models"][name]["threshold"]
-    return {"category": category, "model": name, "verdict": "CACAT" if score > limits["image"] else "NORMAL", "image_score": score, "image_threshold": limits["image"], "pixel_threshold": limits["pixel"], "anomaly_map": anomaly_map, "seconds": elapsed}
+    guard_config = config.get("category_guard", {})
+    guard = evaluate_category_guard(image_bytes, anomaly_map, limits["pixel"], score, limits["image"], area_threshold=float(guard_config.get("anomaly_area_threshold", 0.90)), enabled=bool(guard_config.get("enabled", True)))
+    verdict = "CACAT" if score > limits["image"] else "NORMAL"
+    return {"category": category, "model": name, "verdict": verdict, "display_verdict": "VERIFIKASI" if guard["requires_verification"] else verdict, "image_score": score, "image_threshold": limits["image"], "pixel_threshold": limits["pixel"], "anomaly_map": anomaly_map, "seconds": elapsed, **guard}

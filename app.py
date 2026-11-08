@@ -37,6 +37,7 @@ st.markdown("""
     .qc-verdict p {margin: 7px 0 0; color: #395160;}
     .qc-verdict.good {background: #e7f6ee; border-color: #aedbc2; color: #166b43;}
     .qc-verdict.bad {background: #fff0ec; border-color: #efb9a7; color: #ad3b27;}
+    .qc-verdict.verify {background: #fff7df; border-color: #e7c76f; color: #8a5a00;}
     .qc-note {background: #fff; border-left: 4px solid #d96b27; border-radius: 8px; padding: 13px 16px; color: #49616f; margin: 12px 0 20px;}
     .qc-sidebar-brand {font-weight: 900; font-size: 1.1rem; letter-spacing: .03em; margin: 4px 0 2px;}
     .qc-sidebar-sub {font-size: .79rem; color: #b7ccd4; margin-bottom: 24px;}

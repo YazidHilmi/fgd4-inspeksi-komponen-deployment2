@@ -13,6 +13,8 @@ streamlit run app.py
 
 Setiap kategori dan kandidat mempunyai batas gambar serta piksel sendiri. `deployment_config.json` memakai nilai dari `ringkasan_threshold.csv` di folder ini. Model tidak dilatih ulang saat aplikasi dijalankan.
 
+Pagar verifikasi kategori pada aplikasi menghitung persentase mask anomali di dalam mask objek hasil segmentasi latar sederhana. Jika skor gambar melewati batas keputusan dan sedikitnya 90% area objek ditandai anomali, aplikasi menahan komponen untuk verifikasi kategori atau kualitas foto. Aturan ini adalah heuristik deployment dan bukan model klasifikasi kategori.
+
 ## Artefak dan kode model
 
 - Bobot backbone: `dinov2_vits14_state_dict.pt` (DINOv2 ViT-S/14).

@@ -6,6 +6,10 @@
   "dino_repo_commit": "b9d1c2648e3a5247437d4d953d907a8f3d994457",
   "dino_preprocess": "masking_only",
   "efficientad_max_epochs": 60,
+  "category_guard": {
+    "enabled": true,
+    "anomaly_area_threshold": 0.9
+  },
   "categories": {
     "screw": {
       "efficientad_checkpoint": "screw/efficientad/efficientad_final_60epoch.ckpt",

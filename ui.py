@@ -19,18 +19,25 @@ def category_name(category):
     return CATEGORY_LABELS.get(category, category)
 
 
+def section_intro(kicker, title, description):
+    st.markdown(f'<div class="qc-section">{kicker}</div>', unsafe_allow_html=True)
+    st.header(title)
+    st.markdown(f'<p class="qc-lead">{description}</p>', unsafe_allow_html=True)
+
+
 def show_result(result, image_bytes):
     verdict = result["verdict"]
     if verdict == "CACAT":
-        st.error("**CACAT TERDETEKSI — Tahan komponen**\n\nIndikasi cacat melewati batas model. Pisahkan komponen dari jalur produksi untuk pemeriksaan QC.")
+        st.markdown('<div class="qc-verdict bad"><strong>● CACAT TERDETEKSI · TAHAN KOMPONEN</strong><p>Indikasi cacat melewati batas keputusan. Pisahkan komponen untuk pemeriksaan petugas QC sebelum diproses lebih lanjut.</p></div>', unsafe_allow_html=True)
     else:
-        st.success("**NORMAL — Lolos inspeksi otomatis**\n\nTidak ditemukan indikasi cacat yang melewati batas model. Komponen dapat melanjutkan ke tahap produksi berikutnya.")
+        st.markdown('<div class="qc-verdict good"><strong>● NORMAL · LANJUTKAN KOMPONEN</strong><p>Skor gambar berada dalam batas normal model. Komponen dapat melanjutkan ke tahap produksi berikutnya.</p></div>', unsafe_allow_html=True)
 
     score_col, limit_col, time_col = st.columns(3)
     score_col.metric("Skor gambar", f"{result['image_score']:.5f}")
     limit_col.metric("Batas keputusan", f"{result['image_threshold']:.5f}")
     time_col.metric("Waktu proses", f"{result['seconds'] * 1000:.0f} ms")
-    st.caption("Keputusan gambar memakai skor gambar > batas keputusan. Area pada overlay dan mask memakai batas piksel model yang dipilih.")
+    st.caption("Keputusan gambar: skor gambar > batas keputusan. Area yang ditandai memakai batas piksel model terpilih; warna heatmap sendiri menunjukkan skor relatif pada gambar.")
+    st.markdown('<div class="qc-section">Bukti visual</div>', unsafe_allow_html=True)
     show_visuals(image_bytes, result)
 
 

@@ -5,13 +5,13 @@ import hashlib
 import streamlit as st
 
 from inference import inspect, load_config
-from ui import category_name, show_result
+from ui import category_name, section_intro, show_result
 
 
 category = st.session_state["selected_category"]
-st.header("EfficientAD")
-st.write(f"Inspeksi **{category_name(category)}** dengan checkpoint EfficientAD yang dilatih untuk kategori ini.")
-st.caption(f"Checkpoint 60 epoch · keputusan memakai threshold {category} × EfficientAD.")
+section_intro("Metode model terlatih", "EfficientAD", f"Pemeriksaan {category_name(category)} menggunakan checkpoint model yang dilatih untuk kategori ini.")
+st.caption(f"Checkpoint 60 epoch · batas keputusan khusus {category} × EfficientAD.")
+st.markdown('<div class="qc-section">Foto komponen</div>', unsafe_allow_html=True)
 uploaded = st.file_uploader("Unggah gambar komponen", type=("png", "jpg", "jpeg"), key="efficientad_upload")
 
 if st.button("Periksa komponen", type="primary", disabled=uploaded is None):

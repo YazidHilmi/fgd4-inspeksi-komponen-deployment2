@@ -6,13 +6,12 @@ import pandas as pd
 import streamlit as st
 
 from inference import MODEL_NAMES, inspect
-from ui import category_name, show_visuals
+from ui import category_name, section_intro, show_visuals
 
 
 category = st.session_state["selected_category"]
-st.header("Perbandingan Model")
-st.write(f"Unggah satu gambar **{category_name(category)}** untuk melihat hasil keempat kandidat pada input yang sama.")
-st.caption("Setiap kandidat memakai threshold kategori dan modelnya sendiri. Pilihan model tidak digabung menjadi satu keputusan pabrik.")
+section_intro("Analisis pilihan inspeksi", "Perbandingan Model", f"Bandingkan keputusan empat kandidat pada foto {category_name(category)} yang sama.")
+st.markdown('<div class="qc-note">Setiap kandidat mempunyai batas keputusan sendiri. Halaman ini menampilkan hasil tiap pilihan secara terpisah.</div>', unsafe_allow_html=True)
 
 # Menampilkan kemampuan tiap skenario tanpa mengklaim peringkat evaluasi yang belum tersedia.
 st.subheader("Pilihan model")
@@ -22,7 +21,7 @@ st.table(pd.DataFrame([
     {"Model": "AnomalyDINO full-shot", "Referensi normal": "Seluruh train normal", "Cara kerja": "Membandingkan patch dengan memory bank"},
     {"Model": "EfficientAD", "Referensi normal": "Model terlatih", "Cara kerja": "Prediksi student dan autoencoder"},
 ]).set_index("Model"))
-st.info("Tabel metrik test dari run yang menghasilkan checkpoint Deployment2 belum disertakan. Halaman ini membandingkan prediksi langsung tanpa menunjuk pemenang berdasarkan angka dari run lain.")
+st.info("Metrik test dari run checkpoint ini belum tersedia. Perbandingan menunjukkan prediksi langsung pada gambar yang sama tanpa menetapkan model terbaik dari angka run lain.")
 
 st.divider()
 st.subheader("Coba satu gambar pada semua kandidat")

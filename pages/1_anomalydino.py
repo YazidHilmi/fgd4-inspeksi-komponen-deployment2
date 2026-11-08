@@ -5,15 +5,15 @@ import hashlib
 import streamlit as st
 
 from inference import inspect, load_config
-from ui import category_name, show_result
+from ui import category_name, section_intro, show_result
 
 
 category = st.session_state["selected_category"]
-st.header("AnomalyDINO")
-st.write(f"Inspeksi **{category_name(category)}** menggunakan fitur DINOv2 dan contoh komponen normal yang tersimpan dalam memory bank.")
+section_intro("Metode berbasis referensi", "AnomalyDINO", f"Pemeriksaan {category_name(category)} dengan membandingkan fitur gambar terhadap contoh komponen normal.")
 scenario = st.selectbox("Jumlah referensi normal", ("AnomalyDINO 1-shot", "AnomalyDINO 16-shot", "AnomalyDINO full-shot"))
 references = load_config()["categories"][category]["models"][scenario]["references"]
-st.caption(f"{len(references)} gambar referensi · backbone DINOv2 ViT-S/14 · keputusan memakai threshold {category} × {scenario}.")
+st.caption(f"{len(references)} gambar referensi normal · DINOv2 ViT-S/14 · batas keputusan khusus {category} × {scenario}.")
+st.markdown('<div class="qc-section">Foto komponen</div>', unsafe_allow_html=True)
 uploaded = st.file_uploader("Unggah gambar komponen", type=("png", "jpg", "jpeg"), key="dino_upload")
 
 if st.button("Periksa komponen", type="primary", disabled=uploaded is None):

@@ -1,0 +1,6 @@
+.venv/
+.tmp/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+**/training/
